@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.FinanceRecordMapper">
+    
+    <resultMap type="FinanceRecord" id="FinanceRecordResult">
+        <result property="recordId" column="record_id" />
+        <result property="userId" column="user_id" />
+        <result property="userName" column="user_name" />
+        <result property="type" column="type" />
+        <result property="category" column="category" />
+        <result property="amount" column="amount" />
+        <result property="recordDate" column="record_date" />
+        <result property="remark" column="remark" />
+        <result property="createTime" column="create_time" />
+    </resultMap>
+
+    <sql id="selectFinanceRecordVo">
+        select fr.record_id, fr.user_id, u.nick_name  as user_name, fr.type, fr.category, fr.amount, fr.record_date, fr.remark, fr.create_time
+        from finance_record fr
+        left join sys_user u on u.user_id = fr.user_id
+    </sql>
+
+    <select id="selectFinanceRecordList" parameterType="FinanceRecord" resultMap="FinanceRecordResult">
+        <include refid="selectFinanceRecordVo"/>
+        <where>
+            <if test="userId != null "> and fr.user_id = #{userId}</if>
+            <if test="type != null "> and fr.type = #{type}</if>
+            <if test="category != null  and category != ''"> and fr.category = #{category}</if>
+            <if test="amount != null "> and fr.amount = #{amount}</if>
+            <if test="recordDate != null "> and fr.record_date = #{recordDate}</if>
+        </where>
+    </select>
+    
+    <select id="selectFinanceRecordByRecordId" parameterType="Long" resultMap="FinanceRecordResult">
+        <include refid="selectFinanceRecordVo"/>
+        where fr.record_id = #{recordId}
+    </select>
+
+    <insert id="insertFinanceRecord" parameterType="FinanceRecord" useGeneratedKeys="true" keyProperty="recordId">
+        insert into finance_record
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="type != null">type,</if>
+            <if test="category != null">category,</if>
+            <if test="amount != null">amount,</if>
+            <if test="recordDate != null">record_date,</if>
+            <if test="remark != null">remark,</if>
+            <if test="createTime != null">create_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="type != null">#{type},</if>
+            <if test="category != null">#{category},</if>
+            <if test="amount != null">#{amount},</if>
+            <if test="recordDate != null">#{recordDate},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="createTime != null">#{createTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateFinanceRecord" parameterType="FinanceRecord">
+        update finance_record
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="type != null">type = #{type},</if>
+            <if test="category != null">category = #{category},</if>
+            <if test="amount != null">amount = #{amount},</if>
+            <if test="recordDate != null">record_date = #{recordDate},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+        </trim>
+        where record_id = #{recordId}
+    </update>
+
+    <delete id="deleteFinanceRecordByRecordId" parameterType="Long">
+        delete from finance_record where record_id = #{recordId}
+    </delete>
+
+    <delete id="deleteFinanceRecordByRecordIds" parameterType="String">
+        delete from finance_record where record_id in 
+        <foreach item="recordId" collection="array" open="(" separator="," close=")">
+            #{recordId}
+        </foreach>
+    </delete>
+</mapper>
