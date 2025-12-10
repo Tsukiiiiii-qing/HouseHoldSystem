@@ -84,4 +84,39 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             #{recordId}
         </foreach>
     </delete>
+
+    <!-- 汇总：收入/支出（按天或按范围） -->
+    <select id="selectSummary" resultType="map">
+        SELECT
+        COALESCE(SUM(CASE WHEN fr.type = 1 THEN fr.amount END), 0) AS income_total,
+        COALESCE(SUM(CASE WHEN fr.type = 0 THEN fr.amount END), 0) AS expense_total
+        FROM finance_record fr
+        WHERE fr.user_id = #{userId}
+        <choose>
+            <when test="day != null">
+                AND fr.record_date = #{day}
+            </when>
+            <otherwise>
+                AND fr.record_date BETWEEN #{start} AND #{end}
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- 分类汇总：按类别+类型（支出/收入） -->
+    <select id="selectCategoryBreakdown" resultType="map">
+        SELECT fr.category AS category,
+        fr.type     AS type,
+        COALESCE(SUM(fr.amount), 0) AS total
+        FROM finance_record fr
+        WHERE fr.user_id = #{userId}
+        <choose>
+            <when test="day != null">
+                AND fr.record_date = #{day}
+            </when>
+            <otherwise>
+                AND fr.record_date BETWEEN #{start} AND #{end}
+            </otherwise>
+        </choose>
+        GROUP BY fr.category, fr.type
+    </select>
 </mapper>

@@ -42,3 +42,21 @@ export function delRecord(recordId) {
     method: 'delete'
   })
 }
+
+// 每日结算
+export function dailySummary(date) {
+  return request({
+    url: '/system/record/summary/daily',
+    method: 'get',
+    params: { date }
+  })
+}
+
+// 每月结算
+export function monthlySummary(ym) {
+  return request({
+    url: '/system/record/summary/monthly',
+    method: 'get',
+    params: { ym }
+  })
+}
