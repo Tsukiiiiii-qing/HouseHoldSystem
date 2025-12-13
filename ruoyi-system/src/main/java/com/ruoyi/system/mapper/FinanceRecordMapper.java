@@ -2,6 +2,11 @@ package com.ruoyi.system.mapper;
 
 import java.util.List;
 import com.ruoyi.system.domain.FinanceRecord;
+import org.apache.ibatis.annotations.Param;
+import java.util.Date;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 家庭理财-账目Mapper接口
@@ -58,4 +63,14 @@ public interface FinanceRecordMapper
      * @return 结果
      */
     public int deleteFinanceRecordByRecordIds(Long[] recordIds);
+
+    Map<String, BigDecimal> selectSummary(@Param("userId") Long userId,
+                                          @Param("day") Date day,
+                                          @Param("start") Date start,
+                                          @Param("end") Date end);
+
+    List<Map<String, Object>> selectCategoryBreakdown(@Param("userId") Long userId,
+                                                      @Param("day") Date day,
+                                                      @Param("start") Date start,
+                                                      @Param("end") Date end);
 }

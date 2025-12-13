@@ -37,7 +37,7 @@
 <!--            </el-table-column>-->
             <el-table-column label="消费类别" align="center" prop="category" width="120">
               <template slot-scope="scope">
-                <dict-tag :options="categoryOptions" :value="scope.row.category" />
+                <dict-tag :options="categoryTagOptions" :value="String(scope.row.category)" />
               </template>
             </el-table-column>
             <el-table-column label="金额" align="center" prop="amount" width="120" />
@@ -94,7 +94,7 @@
 <!--            </el-table-column>-->
             <el-table-column label="消费类别" align="center" prop="category" width="120">
               <template slot-scope="scope">
-                <dict-tag :options="categoryOptions" :value="scope.row.category" />
+                <dict-tag :options="categoryTagOptions" :value="String(scope.row.category)" />
               </template>
             </el-table-column>
             <el-table-column label="金额" align="center" prop="amount" width="120" />
@@ -170,6 +170,7 @@ export default {
       // 左：收入
       loadingIncome: true,
       incomeList: [],
+      categoryTagOptions: [],
       incomeTotal: 0,
       incomeQuery: {
         pageNum: 1,
@@ -215,6 +216,11 @@ export default {
         const getSort = d => Number(d.dictSort != null ? d.dictSort : (d.dict_sort != null ? d.dict_sort : 0))
         this.incomeCategoryOptions = list.filter(d => getSort(d) >= 100)
         this.expenseCategoryOptions = list.filter(d => getSort(d) < 100)
+        this.categoryTagOptions = list.map(d => ({
+          value: String(d.dictValue),
+          label: d.dictLabel,
+          raw: d
+        }))
       })
     },
     // 收入

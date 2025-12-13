@@ -2,7 +2,8 @@ package com.ruoyi.system.service;
 
 import java.util.List;
 import com.ruoyi.system.domain.FinanceRecord;
-
+import com.ruoyi.system.domain.vo.FinanceSummaryVO;
+import java.util.Date;
 /**
  * 家庭理财-账目Service接口
  * 
@@ -58,4 +59,7 @@ public interface IFinanceRecordService
      * @return 结果
      */
     public int deleteFinanceRecordByRecordId(Long recordId);
+
+    FinanceSummaryVO getDailySummary(Date day, Long userId);
+    FinanceSummaryVO getRangeSummary(Date start, Date end, Long userId); // 月度用
 }
