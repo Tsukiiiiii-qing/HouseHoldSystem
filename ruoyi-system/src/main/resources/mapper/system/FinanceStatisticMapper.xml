@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.FinanceStatisticMapper">
+
+    <resultMap type="FinanceStatistic" id="FinanceStatisticResult">
+        <result property="statisticId"    column="statistic_id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="statisticType"    column="statistic_type"    />
+        <result property="statisticKey"    column="statistic_key"    />
+        <result property="incomeAmount"    column="income_amount"    />
+        <result property="expenseAmount"    column="expense_amount"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectFinanceStatisticVo">
+        select statistic_id, user_id, statistic_type, statistic_key, income_amount, expense_amount, create_time, update_time from finance_statistic
+    </sql>
+
+    <select id="selectFinanceStatisticList" parameterType="FinanceStatistic" resultMap="FinanceStatisticResult">
+        <include refid="selectFinanceStatisticVo" />
+        <where>
+            <if test="userId != null "> and user_id = #{userId}</if>
+            <if test="statisticType != null  and statisticType != ''"> and statistic_type = #{statisticType}</if>
+            <if test="statisticKey != null  and statisticKey != ''"> and statistic_key = #{statisticKey}</if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <select id="selectFinanceStatisticByStatisticId" parameterType="Long" resultMap="FinanceStatisticResult">
+        <include refid="selectFinanceStatisticVo" />
+        where statistic_id = #{statisticId}
+    </select>
+
+    <insert id="insertFinanceStatistic" parameterType="FinanceStatistic" useGeneratedKeys="true" keyProperty="statisticId">
+        insert into finance_statistic
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="statisticType != null">statistic_type,</if>
+            <if test="statisticKey != null">statistic_key,</if>
+            <if test="incomeAmount != null">income_amount,</if>
+            <if test="expenseAmount != null">expense_amount,</if>
+            create_time
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="statisticType != null">#{statisticType},</if>
+            <if test="statisticKey != null">#{statisticKey},</if>
+            <if test="incomeAmount != null">#{incomeAmount},</if>
+            <if test="expenseAmount != null">#{expenseAmount},</if>
+            now()
+        </trim>
+    </insert>
+
+    <update id="updateFinanceStatistic" parameterType="FinanceStatistic">
+        update finance_statistic
+        <trim prefix="set" suffixOverrides=",">
+            <if test="incomeAmount != null">income_amount = #{incomeAmount},</if>
+            <if test="expenseAmount != null">expense_amount = #{expenseAmount},</if>
+            update_time = now()
+        </trim>
+        where statistic_id = #{statisticId}
+    </update>
+
+    <delete id="deleteFinanceStatisticByStatisticId" parameterType="Long">
+        delete from finance_statistic where statistic_id = #{statisticId}
+    </delete>
+
+    <delete id="deleteFinanceStatisticByStatisticIds" parameterType="String">
+        delete from finance_statistic where statistic_id in
+        <foreach item="statisticId" collection="array" open="(" separator="," close=")">
+            #{statisticId}
+        </foreach>
+    </delete>
+
+</mapper>

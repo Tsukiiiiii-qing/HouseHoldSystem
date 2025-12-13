@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.FamilyNotebookMapper">
+
+    <resultMap type="FamilyNotebook" id="FamilyNotebookResult">
+        <result property="notebookId"    column="notebook_id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="title"    column="title"    />
+        <result property="content"    column="content"    />
+        <result property="tag"    column="tag"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+    </resultMap>
+
+    <sql id="selectFamilyNotebookVo">
+        select notebook_id, user_id, title, content, tag, create_time, update_time, remark from family_notebook
+    </sql>
+
+    <select id="selectFamilyNotebookList" parameterType="FamilyNotebook" resultMap="FamilyNotebookResult">
+        <include refid="selectFamilyNotebookVo" />
+        <where>
+            <if test="userId != null "> and user_id = #{userId}</if>
+            <if test="title != null  and title != ''"> and title like concat('%', #{title}, '%')</if>
+            <if test="tag != null  and tag != ''"> and tag = #{tag}</if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <select id="selectFamilyNotebookByNotebookId" parameterType="Long" resultMap="FamilyNotebookResult">
+        <include refid="selectFamilyNotebookVo" />
+        where notebook_id = #{notebookId}
+    </select>
+
+    <insert id="insertFamilyNotebook" parameterType="FamilyNotebook" useGeneratedKeys="true" keyProperty="notebookId">
+        insert into family_notebook (user_id, title, content, tag, create_time
+        <if test="remark != null">, remark</if>
+        ) values (#{userId}, #{title}, #{content}, #{tag}, now()
+        <if test="remark != null">, #{remark}</if>
+        )
+    </insert>
+
+    <update id="updateFamilyNotebook" parameterType="FamilyNotebook">
+        update family_notebook
+        <trim prefix="set" suffixOverrides=",">
+            <if test="title != null">title = #{title},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="tag != null">tag = #{tag},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = now()
+        </trim>
+        where notebook_id = #{notebookId}
+    </update>
+
+    <delete id="deleteFamilyNotebookByNotebookId" parameterType="Long">
+        delete from family_notebook where notebook_id = #{notebookId}
+    </delete>
+
+    <delete id="deleteFamilyNotebookByNotebookIds" parameterType="String">
+        delete from family_notebook where notebook_id in
+        <foreach item="notebookId" collection="array" open="(" separator="," close=")">
+            #{notebookId}
+        </foreach>
+    </delete>
+
+</mapper>
