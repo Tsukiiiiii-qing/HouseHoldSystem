@@ -51,6 +51,7 @@ export default {
   width: 100%;
   position: relative;
   overflow: hidden;
+  background: #fff8dc;  //主内容区颜色
 }
 
 .fixed-header + .app-main {

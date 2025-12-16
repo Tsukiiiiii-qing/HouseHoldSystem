@@ -225,3 +225,13 @@
     }
   }
 }
+
+/* Force white color for submenu arrow and active items */
+#app .sidebar-container .el-submenu__title .el-submenu__icon-arrow { color: #ffffff !important; }
+#app .sidebar-container .is-opened > .el-submenu__title .el-submenu__icon-arrow { color: #ffffff !important; }
+#app .sidebar-container .el-menu-item.is-active,
+#app .sidebar-container .is-active > .el-submenu__title { color: #5c4805 !important; background-color: #dabc5b !important; border-radius: 4px; }  //点击边栏某一项后文字颜色
+#app .sidebar-container .el-menu-item.is-active .svg-icon,
+#app .sidebar-container .is-active > .el-submenu__title .svg-icon { color: #ffffff !important; }
+#app .el-menu--vertical > .el-menu .el-submenu__title .el-submenu__icon-arrow { color: #ffffff !important; }
+#app .el-menu--vertical > .el-menu .el-menu-item.is-active { background-color: #f8d561 !important; color: #ffffff !important; border-radius: 4px; }

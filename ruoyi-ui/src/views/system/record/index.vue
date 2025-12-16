@@ -150,6 +150,9 @@
 <script>
 import { listRecord, getRecord, delRecord, addRecord, updateRecord } from "@/api/system/record"
 import { getDicts } from "@/api/system/dict/data"
+import { monthlySummary, dailySummary } from '@/api/system/record'
+import { getCurrentBudget } from '@/api/system/budget'
+import { getCurrentDailyBudget } from '@/api/system/dailyBudget'
 
 export default {
   name: "RecordSplit",
@@ -205,6 +208,13 @@ export default {
     this.getIncomeList()
     this.getExpenseList()
   },
+  activated() {
+    this.refreshAll()
+  },
+  mounted() {
+    this.checkBudgetStatus()
+    this.refreshAll();
+  },
   methods: {
     loadDicts() {
       getDicts('finance_type').then(res => {
@@ -222,6 +232,79 @@ export default {
           raw: d
         }))
       })
+    },
+    async checkBudgetStatus() {
+      // 日期/月份
+      const now = new Date()
+      const pad = n => (n < 10 ? '0' + n : '' + n)
+      const ym = now.getFullYear() + '-' + pad(now.getMonth() + 1)
+      const today = ym + '-' + pad(now.getDate())
+
+      // 并发拉：日/月汇总 + 日/月预算
+      const [dailySumRes, monthlySumRes, dailyBudgetRes, monthlyBudgetRes] = await Promise.all([
+        dailySummary(today),
+        monthlySummary(ym),
+        getCurrentDailyBudget(today),
+        getCurrentBudget(ym)
+      ]).catch(() => [null, null, null, null])
+      if (!monthlySumRes || !monthlyBudgetRes) return
+
+      // 月度提醒（按档位，每超 STEP 再提醒一次）
+      const monthBudget = Number((monthlyBudgetRes && monthlyBudgetRes.data) || 0)
+      const monthExpense = Number((monthlySumRes.data && monthlySumRes.data.expenseTotal) || 0)
+      if (monthBudget > 0 && monthExpense > monthBudget) {
+        const over = monthExpense - monthBudget
+        const STEP = 100
+        const bucket = STEP > 0 ? Math.floor(over / STEP) : 0
+        const key = `recordBudgetWarn_month_${ym}_${today}_${bucket}`
+        if (!localStorage.getItem(key)) {
+          this.$alert(`您本月已超支：${over.toFixed(2)}，请注意控制支出。`,
+            '月度超支提醒', { type: 'warning', confirmButtonText: '我知道了' })
+          localStorage.setItem(key, '1')
+        }
+      }
+
+      // 每日提醒（优先用每日预算；否则回退月度日均）
+      if (dailySumRes) {
+        const dayExpense = Number((dailySumRes.data && dailySumRes.data.expenseTotal) || 0)
+        const dayBudget = Number((dailyBudgetRes && dailyBudgetRes.data) || 0)
+        let isDayOver = false
+        let dayOverAmount = 0
+
+        if (dayBudget > 0) {
+          isDayOver = dayExpense > dayBudget
+          dayOverAmount = dayExpense - dayBudget
+        } else if (monthBudget > 0) {
+          const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+          const dailyAllowance = days ? monthBudget / days : 0
+          isDayOver = dayExpense > dailyAllowance
+          dayOverAmount = dayExpense - dailyAllowance
+        }
+
+        if (isDayOver) {
+          const STEP_DAY = 20 // 日提醒步长
+          const bucketDay = STEP_DAY > 0 ? Math.floor(dayOverAmount / STEP_DAY) : 0
+          const keyDay = `recordBudgetWarn_day_${today}_${bucketDay}`
+          if (!localStorage.getItem(keyDay)) {
+            this.$alert(`今日已超支：${dayOverAmount.toFixed(2)}，请注意控制支出。`,
+              '今日超支提醒', { type: 'warning', confirmButtonText: '我知道了' })
+            localStorage.setItem(keyDay, '1')
+          }
+        }
+      }
+    },
+    // 新增：记录变更后的统一刷新（列表 + 预算弹窗）
+    async afterRecordChanged() {
+      // 刷新左右两侧列表
+      await Promise.all([ this.getIncomeList(), this.getExpenseList() ])
+      // 触发当前页的预算检查弹窗（前面我们加过 checkBudgetStatus 就可以复用）
+      if (this.checkBudgetStatus) {
+        await this.checkBudgetStatus()
+      }
+    },
+    async refreshAll() {
+      await this.getIncomeList()
+      await this.getExpenseList()
     },
     // 收入
     getIncomeList() {
@@ -303,9 +386,10 @@ export default {
       this.$refs['form'].validate(valid => {
         if (!valid) return
         const req = this.form.recordId ? updateRecord(this.form) : addRecord(this.form)
-        req.then(() => {
+        req.then(async() => {
           this.$modal.msgSuccess(this.form.recordId ? '修改成功' : '新增成功')
           this.open = false
+          await this.afterRecordChanged()
           this.getIncomeList()
           this.getExpenseList()
         })

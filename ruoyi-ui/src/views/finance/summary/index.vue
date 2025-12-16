@@ -14,7 +14,7 @@
                 value-format="yyyy-MM-dd"
                 placeholder="选择日期"
                 size="mini"
-                @change="loadDailySummary"
+                @change="onDayChange"
               />
             </div>
           </div>
@@ -47,7 +47,7 @@
                 value-format="yyyy-MM"
                 placeholder="选择月份"
                 size="mini"
-                @change="loadMonthlySummary"
+                @change="onMonthChange"
               />
             </div>
           </div>
@@ -110,6 +110,8 @@
 import { dailySummary, monthlySummary } from '@/api/system/record'
 import { getDicts } from '@/api/system/dict/data'
 import * as echarts from 'echarts'
+import { getCurrentBudget } from '@/api/system/budget'
+import { getCurrentDailyBudget, setSelfDailyBudget } from '@/api/system/dailyBudget'
 
 export default {
   name: 'FinanceSummary',
@@ -123,6 +125,11 @@ export default {
       chartDailyIncome: null,
       chartMonthlyExpense: null,
       chartMonthlyIncome: null,
+      monthBudget: 0,
+      monthRemain: 0,
+      monthOver: false,
+      dayRemain: 0,
+      dayOver: false,
       categoryOptions: [],
       categoryLabelMap: {},
     }
@@ -133,6 +140,25 @@ export default {
     this.loadMonthlySummary()
     this.loadDicts()
   },
+  async mounted() {
+    this._resizeHandler = () => {
+      const list = [
+        this['dailyExpensePieRefInst'],
+        this['dailyIncomePieRefInst'],
+        this['monthlyExpensePieRefInst'],
+        this['monthlyIncomePieRefInst']
+      ]
+      list.forEach(i => i && i.resize())
+    }
+    window.addEventListener('resize', this._resizeHandler)
+    await this.loadDailySummary()
+    await this.loadMonthlySummary()
+    await this.loadMonthBudgetAndWarn()
+    await this.loadDayBudgetAndWarn()
+  },
+  activated() {
+    this.refreshAll()
+  },
   methods: {
     // 初始化默认日期/月份
     initDates() {
@@ -140,18 +166,25 @@ export default {
       this.dailyDate = this.formatDate(now)
       this.monthYm = this.formatYm(now)
     },
-    mounted() {
-      this._resizeHandler = () => {
-        const list = [
-          this['dailyExpensePieRefInst'],
-          this['dailyIncomePieRefInst'],
-          this['monthlyExpensePieRefInst'],
-          this['monthlyIncomePieRefInst']
-        ]
-        list.forEach(i => i && i.resize())
-      }
-      window.addEventListener('resize', this._resizeHandler)
+    async refreshAll() {
+      await this.loadDailySummary()
+      await this.loadMonthlySummary()
+      await this.loadMonthBudgetAndWarn()
+      await this.loadDayBudgetAndWarn()
     },
+    // mounted() {
+    //   this._resizeHandler = () => {
+    //     const list = [
+    //       this['dailyExpensePieRefInst'],
+    //       this['dailyIncomePieRefInst'],
+    //       this['monthlyExpensePieRefInst'],
+    //       this['monthlyIncomePieRefInst']
+    //     ]
+    //     list.forEach(i => i && i.resize())
+    //   }
+    //   window.addEventListener('resize', this._resizeHandler)
+    // },
+
     beforeDestroy() {
       window.removeEventListener('resize', this._resizeHandler)
     },
@@ -172,21 +205,116 @@ export default {
         })
       })
     },
+    onMonthChange() {
+      this.loadMonthlySummary().then(() => this.loadMonthBudgetAndWarn())
+    },
+    onDayChange() {
+      this.loadDailySummary().then(() => this.loadDayBudgetAndWarn())
+    },
+    async loadMonthBudgetAndWarn() {
+      const ym = this.monthYm || this.formatYm(new Date())
+      const res = await getCurrentBudget(ym)
+      this.monthBudget = Number((res && res.data) || 0)
+
+      const monthExpense = Number(this.monthlySummaryData.expenseTotal || 0)
+      this.monthRemain = this.monthBudget - monthExpense
+      this.monthOver = this.monthRemain < 0
+
+      // 日均额度（给“今日提醒”用）
+      const dt = new Date(ym + '-01')
+      const days = new Date(dt.getFullYear(), dt.getMonth() + 1, 0).getDate()
+      const dailyAllowance = days ? this.monthBudget / days : 0
+      const dayExpense = Number(this.dailySummaryData.expenseTotal || 0)
+      this.dayRemain = dailyAllowance - dayExpense
+      this.dayOver = this.dayRemain < 0
+
+      // 超支提醒（按档位：每增加 STEP 元再提醒一次）
+      const today = this.formatDate(new Date())
+      if (this.monthBudget > 0 && this.monthOver) {
+        const over = monthExpense - this.monthBudget                   // 超出金额（正数）
+        const STEP = 100                                             // 步长，按需改为 100 / 500 / 1000 …
+        const bucket = STEP > 0 ? Math.floor(over / STEP) : 0          // 当前所处的档位（0,1,2,...）
+        const key = `budgetWarn_${ym}_${today}_${bucket}`              // 当天、该档位是否已提醒
+        if (!localStorage.getItem(key)) {
+          this.$alert(
+            `您本月已超支：${this.money(over)}，请注意控制支出。`,
+            '超支提醒',
+            { type: 'warning', confirmButtonText: '我知道了' }
+          )
+          localStorage.setItem(key, '1')
+        }
+      }
+    },
+    // 日提醒：优先使用每日预算
+    async loadDayBudgetAndWarn() {
+      const date = this.dailyDate || this.formatDate(new Date())
+      const res = await getCurrentDailyBudget(date)
+      const dayBudget = Number((res && res.data) || 0)
+      const dayExpense = Number(this.dailySummaryData.expenseTotal || 0)
+
+      if (dayBudget > 0) {
+        // 用“每日预算”直接对比今日支出
+        this.dayRemain = dayBudget - dayExpense
+        this.dayOver = this.dayRemain < 0
+
+        if (this.dayOver) {
+          const over = dayExpense - dayBudget                 // 超出金额（正数）
+          const STEP = 20                                   // 步长：100/500/1000 均可
+          const bucket = STEP > 0 ? Math.floor(over / STEP) : 0
+          const key = `dayBudgetWarn_${date}_${bucket}`       // 当天该档位是否已提醒
+          if (!localStorage.getItem(key)) {
+            this.$alert(
+              `今日已超支：${this.money(over)}，请注意控制支出。`,
+              '今日超支提醒',
+              { type: 'warning', confirmButtonText: '我知道了' }
+            )
+            localStorage.setItem(key, '1')
+          }
+        }
+      } else {
+        // 未配置“每日预算” → 回退为“月度日均额度”
+        this.recalcDayWarn()
+      }
+    },
+
     loadDailySummary() {
       const date = this.dailyDate || this.formatDate(new Date())
-      dailySummary(date).then(res => {
+      return dailySummary(date).then(res => {
         this.dailySummaryData = res.data || { incomeTotal: 0, expenseTotal: 0, balance: 0, byCategory: [] }
         this.$nextTick(() => this.renderDailyPies())
       })
     },
-
     loadMonthlySummary() {
       const ym = this.monthYm || this.formatYm(new Date())
-      monthlySummary(ym).then(res => {
+      return monthlySummary(ym).then(res => {
         this.monthlySummaryData = res.data || { incomeTotal: 0, expenseTotal: 0, balance: 0, byCategory: [] }
         this.$nextTick(() => this.renderMonthlyPies())
       })
     },
+    recalcDayWarn() {
+      const ym = this.monthYm || this.formatYm(new Date())
+      const dt = new Date(ym + '-01')
+      const days = new Date(dt.getFullYear(), dt.getMonth() + 1, 0).getDate()
+      const dailyAllowance = days ? this.monthBudget / days : 0
+      const dayExpense = Number(this.dailySummaryData.expenseTotal || 0)
+      this.dayRemain = dailyAllowance - dayExpense
+      this.dayOver = this.dayRemain < 0
+    },
+    // loadDailySummary() {
+    //   const date = this.dailyDate || this.formatDate(new Date())
+    //   dailySummary(date).then(res => {
+    //     this.dailySummaryData = res.data || { incomeTotal: 0, expenseTotal: 0, balance: 0, byCategory: [] }
+    //     this.$nextTick(() => this.renderDailyPies())
+    //   })
+    // },
+    //
+    // loadMonthlySummary() {
+    //   const ym = this.monthYm || this.formatYm(new Date())
+    //   monthlySummary(ym).then(res => {
+    //     this.monthlySummaryData = res.data || { incomeTotal: 0, expenseTotal: 0, balance: 0, byCategory: [] }
+    //     this.$nextTick(() => this.renderMonthlyPies())
+    //   })
+    // },
     // 工具：格式化
     formatDate(d) {
       const pad = n => (n < 10 ? '0' + n : '' + n)

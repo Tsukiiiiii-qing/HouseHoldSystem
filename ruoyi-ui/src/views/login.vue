@@ -40,10 +40,11 @@
       <el-checkbox v-model="loginForm.rememberMe" style="margin:0px 0px 25px 0px;">记住密码</el-checkbox>
       <el-form-item style="width:100%;">
         <el-button
+          class="gold-btn"
           :loading="loading"
           size="medium"
-          type="primary"
           style="width:100%;"
+          :style="{ backgroundColor: '#d4af37', borderColor: '#d4af37', color: '#fff' }"
           @click.native.prevent="handleLogin"
         >
           <span v-if="!loading">登 录</span>
@@ -55,9 +56,9 @@
       </el-form-item>
     </el-form>
     <!--  底部  -->
-    <div class="el-login-footer">
-      <span>Copyright © 2018-2025 ruoyi.vip All Rights Reserved.</span>
-    </div>
+<!--    <div class="el-login-footer">-->
+<!--      <span>Copyright © 2018-2025 ruoyi.vip All Rights Reserved.</span>-->
+<!--    </div>-->
   </div>
 </template>
 
@@ -142,7 +143,12 @@ export default {
             Cookies.remove('rememberMe')
           }
           this.$store.dispatch("Login", this.loginForm).then(() => {
-            this.$router.push({ path: this.redirect || "/" }).catch(()=>{})
+            //this.$router.push({ path: this.redirect || "/" }).catch(()=>{})
+            // this.$router.push({ path: this.redirect || "/finance/summary" }).catch(()=>{})
+            const target = !this.redirect || this.redirect === "/" || this.redirect === "/index"
+              ? "/finance/summary"
+              : this.redirect
+            this.$router.push({ path: target }).catch(()=>{})
           }).catch(() => {
             this.loading = false
             if (this.captchaEnabled) {
@@ -172,7 +178,7 @@ export default {
 }
 
 .login-form {
-  border-radius: 6px;
+  border-radius: 20px;
   background: #ffffff;
   width: 400px;
   padding: 25px 25px 5px 25px;
@@ -181,6 +187,7 @@ export default {
     height: 38px;
     input {
       height: 38px;
+      border-radius: 6px;
     }
   }
   .input-icon {
@@ -217,5 +224,45 @@ export default {
 }
 .login-code-img {
   height: 38px;
+}
+.login-form .el-button--primary {
+  background-color: #d4af37 !important;
+  border-color: #d4af37 !important;
+  color: #fff !important;
+}
+.login-form .el-button--primary:hover,
+.login-form .el-button--primary:focus {
+  background-color: #e6c547 !important;
+  border-color: #e6c547 !important;
+}
+.login-form .el-button--primary:active {
+  background-color: #c9a227 !important;
+  border-color: #c9a227 !important;
+}
+.login-form .el-input__inner {
+  border-radius: 10px;
+}
+/* Gold button explicit class to ensure override */
+.gold-btn {
+  background-color: #d4af37 !important;
+  border-color: #d4af37 !important;
+  color: #fff !important;
+  border-radius: 10px !important;
+}
+.gold-btn:hover,
+.gold-btn:focus {
+  background-color: #e6c547 !important;
+  border-color: #e6c547 !important;
+}
+.gold-btn:active,
+.gold-btn.is-active {
+  background-color: #c9a227 !important;
+  border-color: #c9a227 !important;
+}
+.gold-btn.is-disabled,
+.gold-btn.is-loading {
+  background-color: #d4af37 !important;
+  border-color: #d4af37 !important;
+  opacity: 0.85;
 }
 </style>

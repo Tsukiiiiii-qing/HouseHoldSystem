@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.FinanceDailyBudgetMapper">
+
+    <resultMap type="FinanceDailyBudget" id="FinanceDailyBudgetResult">
+        <result property="id"    column="id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="userName" column="user_name"/>
+        <result property="budgetDate"    column="budget_date"    />
+        <result property="amount"    column="amount"    />
+        <result property="remark"    column="remark"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectFinanceDailyBudgetVo">
+        SELECT
+            db.`id`, db.`user_id`, u.`nick_name` AS user_name,
+            db.`budget_date`, db.`amount`, db.`remark`,
+            db.`create_time`, db.`update_time`
+        FROM `finance_daily_budget` db
+                 LEFT JOIN `sys_user` u ON u.`user_id` = db.`user_id`
+    </sql>
+
+<!--    <select id="selectFinanceDailyBudgetList" parameterType="FinanceDailyBudget" resultMap="FinanceDailyBudgetResult">-->
+<!--        <include refid="selectFinanceDailyBudgetVo"/>-->
+<!--        <where>-->
+<!--            <if test="userId != null">AND `user_id` = #{userId}</if>-->
+<!--            <if test="budgetDate != null">AND `budget_date` = #{budgetDate}</if>-->
+<!--            <if test="amount != null">AND `amount` = #{amount}</if>-->
+<!--        </where>-->
+<!--    </select>-->
+    <select id="selectFinanceDailyBudgetList" parameterType="FinanceDailyBudget" resultMap="FinanceDailyBudgetResult">
+        <include refid="selectFinanceDailyBudgetVo"/>
+        <where>
+            <if test="userId != null">AND db.`user_id` = #{userId}</if>
+            <if test="budgetDate != null">AND `budget_date` = #{budgetDate}</if>
+            <if test="amount != null">AND `amount` = #{amount}</if>
+        </where>
+    </select>
+
+    <select id="selectFinanceDailyBudgetById" parameterType="Long" resultMap="FinanceDailyBudgetResult">
+        <include refid="selectFinanceDailyBudgetVo"/>
+        WHERE `id` = #{id}
+    </select>
+
+    <insert id="insertFinanceDailyBudget" parameterType="FinanceDailyBudget" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO `finance_daily_budget`
+            (`user_id`,`budget_date`,`amount`,`remark`,`create_time`)
+        VALUES
+            (#{userId},#{budgetDate},#{amount},#{remark},#{createTime})
+    </insert>
+
+    <update id="updateFinanceDailyBudget" parameterType="FinanceDailyBudget">
+        update finance_daily_budget
+        <set>
+            <if test="amount != null">`amount` = #{amount},</if>
+            <if test="remark != null">`remark` = #{remark},</if>
+            <if test="updateTime != null">`update_time` = #{updateTime},</if>
+        </set>
+        WHERE `id` = #{id}
+    </update>
+
+    <delete id="deleteFinanceDailyBudgetById" parameterType="Long">
+        DELETE FROM `finance_daily_budget` WHERE `id` = #{id}
+    </delete>
+
+    <delete id="deleteFinanceDailyBudgetByIds" parameterType="String">
+        delete from `finance_daily_budget` where `id` in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <select id="existsByUserAndDate" resultType="int">
+        SELECT COUNT(1) FROM `finance_daily_budget`
+        WHERE `user_id` = #{userId} AND `budget_date` = #{date}
+    </select>
+
+    <select id="selectAmountByUserAndDate" resultType="java.math.BigDecimal">
+        SELECT `amount` FROM `finance_daily_budget`
+        WHERE `user_id` = #{userId} AND `budget_date` = #{date} LIMIT 1
+    </select>
+
+    <update id="updateByUserAndDate">
+        UPDATE `finance_daily_budget`
+        SET `amount` = #{amount},
+            `remark` = #{remark},
+            `update_time` = #{updateTime}
+        WHERE `user_id` = #{userId} AND `budget_date` = #{date}
+    </update>
+</mapper>
