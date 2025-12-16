@@ -41,6 +41,8 @@ public class FinanceRecordController extends BaseController
     public TableDataInfo list(FinanceRecord financeRecord)
     {
         startPage();
+        Long currentUserId = SecurityUtils.getUserId();
+        financeRecord.setUserId(currentUserId);
         List<FinanceRecord> list = financeRecordService.selectFinanceRecordList(financeRecord);
         return getDataTable(list);
     }
@@ -53,6 +55,8 @@ public class FinanceRecordController extends BaseController
     @PostMapping("/export")
     public void export(HttpServletResponse response, FinanceRecord financeRecord)
     {
+        Long currentUserId = SecurityUtils.getUserId();
+        financeRecord.setUserId(currentUserId);
         List<FinanceRecord> list = financeRecordService.selectFinanceRecordList(financeRecord);
         ExcelUtil<FinanceRecord> util = new ExcelUtil<FinanceRecord>(FinanceRecord.class);
         util.exportExcel(response, list, "家庭理财-账目数据");
@@ -128,5 +132,25 @@ public class FinanceRecordController extends BaseController
         Long userId = SecurityUtils.getUserId();
         FinanceSummaryVO vo = financeRecordService.getRangeSummary(start, end, userId);
         return AjaxResult.success(vo);
+    }
+
+    /** 全量查看：不按当前用户过滤，仅限有权限的人使用 */
+    @PreAuthorize("@ss.hasPermi('system:record:all:list')")
+    @GetMapping("/all/list")
+    public com.ruoyi.common.core.page.TableDataInfo listAll(FinanceRecord financeRecord) {
+        startPage();
+        java.util.List<FinanceRecord> list = financeRecordService.selectFinanceRecordList(financeRecord);
+        return getDataTable(list);
+    }
+
+    /** 全量导出：不按当前用户过滤，仅限有权限的人使用 */
+    @PreAuthorize("@ss.hasPermi('system:record:all:export')")
+    @Log(title = "家庭理财-账目（全量导出）", businessType = BusinessType.EXPORT)
+    @PostMapping("/all/export")
+    public void exportAll(javax.servlet.http.HttpServletResponse response, FinanceRecord financeRecord) {
+        java.util.List<FinanceRecord> list = financeRecordService.selectFinanceRecordList(financeRecord);
+        com.ruoyi.common.utils.poi.ExcelUtil<FinanceRecord> util =
+                new com.ruoyi.common.utils.poi.ExcelUtil<>(FinanceRecord.class);
+        util.exportExcel(response, list, "家庭理财-账目（全量）");
     }
 }

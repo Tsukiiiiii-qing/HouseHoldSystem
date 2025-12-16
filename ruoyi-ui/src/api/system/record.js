@@ -60,3 +60,22 @@ export function monthlySummary(ym) {
     params: { ym }
   })
 }
+
+// 全量列表（仅有权限者可用）
+export function listRecordAll(query) {
+  return request({
+    url: '/system/record/all/list',
+    method: 'get',
+    params: query
+  })
+}
+
+// 全量导出（仅有权限者可用）
+export function exportRecordAll(query) {
+  return request({
+    url: '/system/record/all/export',
+    method: 'post',
+    data: query,
+    responseType: 'blob'
+  })
+}
