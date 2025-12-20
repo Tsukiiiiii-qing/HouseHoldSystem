@@ -44,6 +44,18 @@ public class TaskReminderServiceImpl implements ITaskReminderService
     }
 
     /**
+     * 查询用户最早一条到期未完成提醒
+     *
+     * @param userId 用户ID
+     * @return 事物提醒
+     */
+    @Override
+    public TaskReminder selectDueTaskReminder(Long userId)
+    {
+        return taskReminderMapper.selectDueTaskReminder(userId);
+    }
+
+    /**
      * 新增事物提醒
      * 
      * @param taskReminder 事物提醒

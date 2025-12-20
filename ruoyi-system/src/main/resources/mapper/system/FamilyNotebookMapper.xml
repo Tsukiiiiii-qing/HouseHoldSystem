@@ -7,6 +7,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <resultMap type="FamilyNotebook" id="FamilyNotebookResult">
         <result property="notebookId"    column="notebook_id"    />
         <result property="userId"    column="user_id"    />
+        <result property="userName"    column="user_name"    />
         <result property="title"    column="title"    />
         <result property="content"    column="content"    />
         <result property="tag"    column="tag"    />
@@ -16,15 +17,17 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectFamilyNotebookVo">
-        select notebook_id, user_id, title, content, tag, create_time, update_time, remark from family_notebook
+        select fn.notebook_id, fn.user_id, u.nick_name as user_name, fn.title, fn.content, fn.tag, fn.create_time, fn.update_time, fn.remark
+        from family_notebook fn
+        left join sys_user u on u.user_id = fn.user_id
     </sql>
 
     <select id="selectFamilyNotebookList" parameterType="FamilyNotebook" resultMap="FamilyNotebookResult">
         <include refid="selectFamilyNotebookVo" />
         <where>
-            <if test="userId != null "> and user_id = #{userId}</if>
-            <if test="title != null  and title != ''"> and title like concat('%', #{title}, '%')</if>
-            <if test="tag != null  and tag != ''"> and tag = #{tag}</if>
+            <if test="userId != null "> and fn.user_id = #{userId}</if>
+            <if test="title != null  and title != ''"> and fn.title like concat('%', #{title}, '%')</if>
+            <if test="tag != null  and tag != ''"> and fn.tag = #{tag}</if>
         </where>
         order by create_time desc
     </select>

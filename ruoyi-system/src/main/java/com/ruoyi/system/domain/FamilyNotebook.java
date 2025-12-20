@@ -24,7 +24,8 @@ public class FamilyNotebook extends BaseEntity
     private Long userId;
 
     /** 用户名称（冗余显示用） */
-    @Excel(name = "用户")
+    // 仅用于导入/显示，不参与导出
+    @Excel(name = "用户", type = Excel.Type.IMPORT)
     private String userName;
 
     /** 标题 */

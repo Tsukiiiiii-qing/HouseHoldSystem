@@ -21,6 +21,7 @@ import variables from '@/assets/styles/variables.scss'
 import { dailySummary, monthlySummary } from '@/api/system/record'
 import { getCurrentBudget } from '@/api/system/budget'
 import { getCurrentDailyBudget } from '@/api/system/dailyBudget'
+import { getDueReminder, updateReminder } from '@/api/system/reminder'
 
 export default {
   name: 'Layout',
@@ -31,8 +32,22 @@ export default {
     Sidebar,
     TagsView
   },
+  data() {
+    return {
+      reminderPollTimer: null,
+      reminderDialogOpen: false,
+      reminderPollPausedUntil: 0
+    }
+  },
   mounted() {
     this.checkBudgetStatus()
+    this.startReminderPolling()
+  },
+  beforeDestroy() {
+    if (this.reminderPollTimer) {
+      clearInterval(this.reminderPollTimer)
+      this.reminderPollTimer = null
+    }
   },
   mixins: [ResizeMixin],
   computed: {
@@ -64,13 +79,11 @@ export default {
       this.$refs.settingRef.openSetting()
     },
     async checkBudgetStatus() {
-      // 1. 获取当前日期和月份
       const now = new Date()
       const pad = n => (n < 10 ? '0' + n : '' + n)
       const ym = now.getFullYear() + '-' + pad(now.getMonth() + 1)
       const today = ym + '-' + pad(now.getDate())
 
-      // 2. 并发请求：日/月汇总 & 日/月预算
       const [
         dailySumRes,
         monthlySumRes,
@@ -86,7 +99,6 @@ export default {
         return [null, null, null, null]
       })
 
-      // --- 月度超支检查 ---
       if (monthlySumRes && monthlyBudgetRes) {
         const monthBudget = Number((monthlyBudgetRes && monthlyBudgetRes.data) || 0)
         const monthExpense = Number((monthlySumRes.data && monthlySumRes.data.expenseTotal) || 0)
@@ -94,7 +106,7 @@ export default {
 
         if (isMonthOver) {
           const overAmount = monthExpense - monthBudget
-          const STEP = 100 // 月度步长
+          const STEP = 100
           const bucket = STEP > 0 ? Math.floor(overAmount / STEP) : 0
           const key = `globalBudgetWarn_month_${ym}_${today}_${bucket}`
 
@@ -109,22 +121,19 @@ export default {
         }
       }
 
-      // --- 每日超支检查 ---
       if (dailySumRes && dailyBudgetRes) {
         const dayBudget = Number((dailyBudgetRes && dailyBudgetRes.data) || 0)
         const dayExpense = Number((dailySumRes.data && dailySumRes.data.expenseTotal) || 0)
 
-        let dailyAllowance = 0;
-        let isDayOver = false;
-        let dayOverAmount = 0;
+        let dailyAllowance = 0
+        let isDayOver = false
+        let dayOverAmount = 0
 
         if (dayBudget > 0) {
-          // 优先用“每日预算”
-          dailyAllowance = dayBudget;
-          isDayOver = dayExpense > dailyAllowance;
-          dayOverAmount = dayExpense - dailyAllowance;
+          dailyAllowance = dayBudget
+          isDayOver = dayExpense > dailyAllowance
+          dayOverAmount = dayExpense - dailyAllowance
         } else {
-          // 没有“每日预算”，回退到“月度日均”
           const monthBudget = Number((monthlyBudgetRes && monthlyBudgetRes.data) || 0)
           if (monthBudget > 0) {
             const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
@@ -135,7 +144,7 @@ export default {
         }
 
         if (isDayOver) {
-          const STEP = 20// 每日步长
+          const STEP = 20
           const bucket = STEP > 0 ? Math.floor(dayOverAmount / STEP) : 0
           const key = `globalBudgetWarn_day_${today}_${bucket}`
 
@@ -149,6 +158,71 @@ export default {
           }
         }
       }
+    },
+    startReminderPolling() {
+      this.checkDueReminder()
+
+      if (this.reminderPollTimer) {
+        clearInterval(this.reminderPollTimer)
+      }
+
+      this.reminderPollTimer = setInterval(() => {
+        this.checkDueReminder()
+      }, 30000)
+    },
+    async checkDueReminder() {
+      if (this.reminderDialogOpen) {
+        return
+      }
+      if (this.reminderPollPausedUntil && Date.now() < this.reminderPollPausedUntil) {
+        return
+      }
+
+      const editingFlag = sessionStorage.getItem('taskReminderEditing')
+      const currentPath = this.$route && this.$route.path
+      if (editingFlag === '1' && currentPath && currentPath.indexOf('/finance/reminder') === 0) {
+        return
+      }
+
+      const res = await getDueReminder().catch(() => null)
+      const reminder = res && res.data
+      if (!reminder || !reminder.reminderId) {
+        return
+      }
+
+      this.reminderDialogOpen = true
+
+      this.$confirm(
+        reminder.reminderTitle,
+        '事物提醒',
+        {
+          type: 'warning',
+          confirmButtonText: '已完成',
+          cancelButtonText: '未完成',
+          distinguishCancelAndClose: true,
+          showClose: false,
+          closeOnClickModal: false,
+          closeOnPressEscape: false
+        }
+      ).then(async () => {
+        this.reminderDialogOpen = false
+        this.$msgbox.close()
+        await updateReminder({ reminderId: reminder.reminderId, status: 1 }).catch(() => {})
+        this.reminderPollPausedUntil = Date.now() + 10000
+        if (this.$route && this.$route.query && this.$route.query.reminderId) {
+          this.$router.replace({ path: this.$route.path, query: {} })
+        }
+        sessionStorage.removeItem('taskReminderEditing')
+      }).catch(action => {
+        if (action === 'cancel') {
+          this.reminderDialogOpen = false
+          this.$msgbox.close()
+          sessionStorage.setItem('taskReminderEditing', '1')
+          setTimeout(() => {
+            this.$router.push({ path: '/finance/reminder', query: { reminderId: reminder.reminderId } })
+          }, 150)
+        }
+      })
     }
   }
 }

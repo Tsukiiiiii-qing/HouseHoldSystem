@@ -9,6 +9,14 @@ export function listReminder(query) {
   })
 }
 
+// 查询当前用户最早一条到期未完成提醒
+export function getDueReminder() {
+  return request({
+    url: '/system/reminder/dueReminder',
+    method: 'get'
+  })
+}
+
 // 查询事物提醒详细
 export function getReminder(reminderId) {
   return request({

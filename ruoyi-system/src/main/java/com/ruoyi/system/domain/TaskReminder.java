@@ -36,10 +36,6 @@ public class TaskReminder extends BaseEntity
     @Excel(name = "提醒时间", width = 30, dateFormat = "yyyy-MM-dd HH:mm:ss")
     private Date reminderTime;
 
-    /** 是否超支提醒（0否 1是） */
-    @Excel(name = "是否超支提醒")
-    private Long isOverspendAlert;
-
     /** 状态（0未完成 1已完成） */
     @Excel(name = "状态")
     private Long status;
@@ -92,16 +88,6 @@ public class TaskReminder extends BaseEntity
         return reminderTime;
     }
 
-    public void setIsOverspendAlert(Long isOverspendAlert) 
-    {
-        this.isOverspendAlert = isOverspendAlert;
-    }
-
-    public Long getIsOverspendAlert() 
-    {
-        return isOverspendAlert;
-    }
-
     public void setStatus(Long status) 
     {
         this.status = status;
@@ -119,7 +105,6 @@ public class TaskReminder extends BaseEntity
             .append("userId", getUserId())
             .append("reminderTitle", getReminderTitle())
             .append("reminderTime", getReminderTime())
-            .append("isOverspendAlert", getIsOverspendAlert())
             .append("status", getStatus())
             .append("createTime", getCreateTime())
             .append("remark", getRemark())

@@ -19,14 +19,62 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         select statistic_id, user_id, statistic_type, statistic_key, income_amount, expense_amount, create_time, update_time from finance_statistic
     </sql>
 
-    <select id="selectFinanceStatisticList" parameterType="FinanceStatistic" resultMap="FinanceStatisticResult">
-        <include refid="selectFinanceStatisticVo" />
+    <!-- 按指定维度（日期 / 类别 / 用户）聚合 finance_record，统计收入与支出总额 -->
+    <select id="selectFinanceStatisticList" parameterType="FinanceStatistic" resultType="FinanceStatistic">
+        SELECT
+        <choose>
+            <when test="statisticType == 'category'">
+                'category' AS statistic_type,
+                COALESCE(fr.category, '未分类') AS statistic_key,
+            </when>
+            <when test="statisticType == 'user'">
+                'user' AS statistic_type,
+                COALESCE(u.nick_name, u.user_name, CONCAT('用户', fr.user_id)) AS statistic_key,
+            </when>
+            <otherwise>
+                'date' AS statistic_type,
+                DATE_FORMAT(fr.record_date, '%Y-%m-%d') AS statistic_key,
+            </otherwise>
+        </choose>
+        COALESCE(SUM(CASE WHEN CAST(fr.type AS CHAR) = '1' THEN CAST(fr.amount AS DECIMAL(20,2)) END), 0) AS income_amount,
+        COALESCE(SUM(CASE WHEN CAST(fr.type AS CHAR) = '0' THEN CAST(fr.amount AS DECIMAL(20,2)) END), 0) AS expense_amount
+        FROM finance_record fr
+        LEFT JOIN sys_user u ON u.user_id = fr.user_id
         <where>
-            <if test="userId != null "> and user_id = #{userId}</if>
-            <if test="statisticType != null  and statisticType != ''"> and statistic_type = #{statisticType}</if>
-            <if test="statisticKey != null  and statisticKey != ''"> and statistic_key = #{statisticKey}</if>
+            <if test="statisticType == 'date' and statisticKey != null and statisticKey != ''">
+                AND DATE_FORMAT(fr.record_date, '%Y-%m-%d') = #{statisticKey}
+            </if>
+            <if test="statisticType == 'category' and statisticKey != null and statisticKey != ''">
+                AND fr.category = #{statisticKey}
+            </if>
+            <if test="statisticType == 'user' and statisticKey != null and statisticKey != ''">
+                AND (u.nick_name = #{statisticKey} OR u.user_name = #{statisticKey})
+            </if>
         </where>
-        order by create_time desc
+        GROUP BY
+        <choose>
+            <when test="statisticType == 'category'">
+                fr.category
+            </when>
+            <when test="statisticType == 'user'">
+                u.nick_name, u.user_name, fr.user_id
+            </when>
+            <otherwise>
+                DATE_FORMAT(fr.record_date, '%Y-%m-%d')
+            </otherwise>
+        </choose>
+        ORDER BY
+        <choose>
+            <when test="statisticType == 'category'">
+                fr.category ASC
+            </when>
+            <when test="statisticType == 'user'">
+                statistic_key ASC
+            </when>
+            <otherwise>
+                statistic_key DESC
+            </otherwise>
+        </choose>
     </select>
 
     <select id="selectFinanceStatisticByStatisticId" parameterType="Long" resultMap="FinanceStatisticResult">

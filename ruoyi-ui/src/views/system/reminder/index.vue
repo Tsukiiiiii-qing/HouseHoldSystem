@@ -22,12 +22,6 @@
                 <el-option label="已完成" value="1" />
               </el-select>
             </el-form-item>
-            <el-form-item label="超支提醒" prop="isOverspendAlert">
-              <el-select v-model="queryParams.isOverspendAlert" placeholder="请选择" clearable>
-                <el-option label="否" value="0" />
-                <el-option label="是" value="1" />
-              </el-select>
-            </el-form-item>
             <el-form-item>
               <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
               <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
@@ -40,12 +34,6 @@
             <el-table-column label="提醒时间" align="center" prop="reminderTime" width="180">
               <template slot-scope="scope">
                 <span>{{ parseTime(scope.row.reminderTime, '{y}-{m}-{d} {h}:{i}:{s}') }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="超支提醒" align="center" prop="isOverspendAlert" width="100">
-              <template slot-scope="scope">
-                <el-tag v-if="scope.row.isOverspendAlert == 1" type="danger">是</el-tag>
-                <el-tag v-else type="success">否</el-tag>
               </template>
             </el-table-column>
             <el-table-column label="状态" align="center" prop="status" width="100">
@@ -81,12 +69,6 @@
         </el-form-item>
         <el-form-item label="提醒时间" prop="reminderTime">
           <el-date-picker v-model="form.reminderTime" type="datetime" placeholder="选择提醒时间" value-format="yyyy-MM-dd HH:mm:ss" />
-        </el-form-item>
-        <el-form-item label="超支提醒" prop="isOverspendAlert">
-          <el-radio-group v-model="form.isOverspendAlert">
-            <el-radio :label="0">否</el-radio>
-            <el-radio :label="1">是</el-radio>
-          </el-radio-group>
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-radio-group v-model="form.status">
@@ -131,8 +113,7 @@ export default {
         pageNum: 1,
         pageSize: 10,
         reminderTitle: "",
-        status: "",
-        isOverspendAlert: ""
+        status: ""
       },
       form: {},
       rules: {
@@ -147,6 +128,29 @@ export default {
   },
   created() {
     this.getList();
+    const reminderId = this.$route.query && this.$route.query.reminderId;
+    if (reminderId) {
+      this.handleUpdate({ reminderId });
+      this.$router.replace({ path: this.$route.path, query: {} });
+    }
+  },
+  beforeDestroy() {
+    sessionStorage.removeItem('taskReminderEditing');
+  },
+  watch: {
+    '$route.query.reminderId'(reminderId) {
+      if (reminderId) {
+        this.handleUpdate({ reminderId });
+        this.$router.replace({ path: this.$route.path, query: {} });
+      }
+    },
+    open(val) {
+      if (val) {
+        sessionStorage.setItem('taskReminderEditing', '1');
+      } else {
+        sessionStorage.removeItem('taskReminderEditing');
+      }
+    }
   },
   methods: {
     /** 查询列表 */
@@ -176,8 +180,7 @@ export default {
       this.title = "添加事物提醒";
       this.form = {
         userId: this.id,
-        status: 0,
-        isOverspendAlert: 0
+        status: 0
       };
     },
     /** 修改按钮操作 */

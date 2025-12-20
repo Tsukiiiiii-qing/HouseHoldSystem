@@ -19,6 +19,7 @@ import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.system.domain.TaskReminder;
 import com.ruoyi.system.service.ITaskReminderService;
 import com.ruoyi.common.utils.poi.ExcelUtil;
+import com.ruoyi.common.utils.SecurityUtils;
 
 /**
  * 事物提醒Controller
@@ -42,6 +43,17 @@ public class TaskReminderController extends BaseController
     {
         List<TaskReminder> list = taskReminderService.selectTaskReminderList(taskReminder);
         return success(list);
+    }
+
+    /**
+     * 获取当前用户最早一条到期未完成提醒
+     */
+    @PreAuthorize("@ss.hasPermi('system:reminder:list')")
+    @GetMapping("/dueReminder")
+    public AjaxResult due()
+    {
+        Long userId = SecurityUtils.getUserId();
+        return success(taskReminderService.selectDueTaskReminder(userId));
     }
 
     /**

@@ -9,7 +9,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="userId"    column="user_id"    />
         <result property="reminderTitle"    column="reminder_title"    />
         <result property="reminderTime"    column="reminder_time"    />
-        <result property="isOverspendAlert"    column="is_overspend_alert"    />
         <result property="status"    column="status"    />
         <result property="createTime"    column="create_time"    />
         <result property="updateTime"    column="update_time"    />
@@ -17,7 +16,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     </resultMap>
 
     <sql id="selectTaskReminderVo">
-        select reminder_id, user_id, reminder_title, reminder_time, is_overspend_alert, status, create_time, update_time, remark from task_reminder
+        select reminder_id, user_id, reminder_title, reminder_time, status, create_time, update_time, remark from task_reminder
     </sql>
 
     <select id="selectTaskReminderList" parameterType="TaskReminder" resultMap="TaskReminderResult">
@@ -26,7 +25,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="userId != null "> and user_id = #{userId}</if>
             <if test="reminderTitle != null  and reminderTitle != ''"> and reminder_title like concat('%', #{reminderTitle}, '%')</if>
             <if test="status != null "> and status = #{status}</if>
-            <if test="isOverspendAlert != null "> and is_overspend_alert = #{isOverspendAlert}</if>
         </where>
         order by reminder_time asc
     </select>
@@ -36,10 +34,17 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where reminder_id = #{reminderId}
     </select>
 
+    <select id="selectDueTaskReminder" parameterType="Long" resultMap="TaskReminderResult">
+        <include refid="selectTaskReminderVo" />
+        where user_id = #{value} and status = 0 and reminder_time &lt;= now()
+        order by reminder_time asc
+        limit 1
+    </select>
+
     <insert id="insertTaskReminder" parameterType="TaskReminder" useGeneratedKeys="true" keyProperty="reminderId">
         insert into task_reminder (user_id, reminder_title, reminder_time, is_overspend_alert, status, create_time
         <if test="remark != null">, remark</if>
-        ) values (#{userId}, #{reminderTitle}, #{reminderTime}, #{isOverspendAlert}, #{status}, now()
+        ) values (#{userId}, #{reminderTitle}, #{reminderTime}, 0, #{status}, now()
         <if test="remark != null">, #{remark}</if>
         )
     </insert>
@@ -49,7 +54,6 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <trim prefix="set" suffixOverrides=",">
             <if test="reminderTitle != null">reminder_title = #{reminderTitle},</if>
             <if test="reminderTime != null">reminder_time = #{reminderTime},</if>
-            <if test="isOverspendAlert != null">is_overspend_alert = #{isOverspendAlert},</if>
             <if test="status != null">status = #{status},</if>
             <if test="remark != null">remark = #{remark},</if>
             update_time = now()

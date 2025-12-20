@@ -28,6 +28,14 @@ public interface ITaskReminderService
     public List<TaskReminder> selectTaskReminderList(TaskReminder taskReminder);
 
     /**
+     * 查询用户最早一条到期未完成提醒
+     *
+     * @param userId 用户ID
+     * @return 事物提醒
+     */
+    public TaskReminder selectDueTaskReminder(Long userId);
+
+    /**
      * 新增事物提醒
      * 
      * @param taskReminder 事物提醒
