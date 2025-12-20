@@ -168,7 +168,7 @@ export default {
 
       this.reminderPollTimer = setInterval(() => {
         this.checkDueReminder()
-      }, 30000)
+      }, 10000) // 提醒轮询加快到 10s，提升实时性
     },
     async checkDueReminder() {
       if (this.reminderDialogOpen) {
@@ -208,6 +208,7 @@ export default {
         this.reminderDialogOpen = false
         this.$msgbox.close()
         await updateReminder({ reminderId: reminder.reminderId, status: 1 }).catch(() => {})
+        window.dispatchEvent(new CustomEvent('reminder-updated', { detail: reminder.reminderId }))
         this.reminderPollPausedUntil = Date.now() + 10000
         if (this.$route && this.$route.query && this.$route.query.reminderId) {
           this.$router.replace({ path: this.$route.path, query: {} })

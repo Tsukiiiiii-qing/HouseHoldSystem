@@ -23,8 +23,8 @@ public class TaskReminder extends BaseEntity
     /** 用户ID */
     private Long userId;
 
-    /** 用户名称（冗余显示用） */
-    @Excel(name = "用户")
+    /** 用户名称（仅用于展示，不参与导出） */
+    @Excel(name = "用户", type = Excel.Type.IMPORT)
     private String userName;
 
     /** 提醒标题 */

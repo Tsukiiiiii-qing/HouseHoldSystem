@@ -109,6 +109,7 @@ export default {
       total: 0,
       open: false,
       title: "",
+      reminderUpdateHandler: null,
       queryParams: {
         pageNum: 1,
         pageSize: 10,
@@ -128,6 +129,8 @@ export default {
   },
   created() {
     this.getList();
+    this.reminderUpdateHandler = () => this.handleExternalUpdate();
+    window.addEventListener('reminder-updated', this.reminderUpdateHandler);
     const reminderId = this.$route.query && this.$route.query.reminderId;
     if (reminderId) {
       this.handleUpdate({ reminderId });
@@ -136,6 +139,9 @@ export default {
   },
   beforeDestroy() {
     sessionStorage.removeItem('taskReminderEditing');
+    if (this.reminderUpdateHandler) {
+      window.removeEventListener('reminder-updated', this.reminderUpdateHandler);
+    }
   },
   watch: {
     '$route.query.reminderId'(reminderId) {
@@ -240,6 +246,10 @@ export default {
     cancel() {
       this.open = false;
       this.resetForm("form");
+    },
+    /** 外部完成后刷新列表（来自全局弹窗） */
+    handleExternalUpdate() {
+      this.getList();
     }
   }
 };
